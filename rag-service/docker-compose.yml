@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  rag-service:
+    build: .
+    container_name: edufarm-rag-service
+    ports:
+      - "8000:8000"
+    volumes:
+      # Сохранение векторной базы данных
+      - ./data/chroma_db:/app/data/chroma_db
+      # Монтирование учебников для загрузки
+      - ./data/textbooks:/app/data/textbooks
+    environment:
+      - LLM_PROVIDER=ollama
+      - EMBEDDING_FUNCTION=${EMBEDDING_FUNCTION:-onnx_minilm_l6_v2}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5-3b-instruct-q4km}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.2}
+      - OLLAMA_NUM_CTX=${OLLAMA_NUM_CTX:-4096}
+      - OLLAMA_NUM_PREDICT=${OLLAMA_NUM_PREDICT:-700}
+      - RETRIEVAL_DISTANCE_THRESHOLD=${RETRIEVAL_DISTANCE_THRESHOLD:-1.2}
+      - RETRIEVAL_FETCH_MULTIPLIER=${RETRIEVAL_FETCH_MULTIPLIER:-3}
+      - RETRIEVAL_MAX_CHUNKS_PER_TEXTBOOK=${RETRIEVAL_MAX_CHUNKS_PER_TEXTBOOK:-2}
+      - CHROMA_DB_PATH=/app/data/chroma_db
+      - CHROMA_RESET_ON_SCHEMA_ERROR=${CHROMA_RESET_ON_SCHEMA_ERROR:-true}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - ENABLE_METRICS=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - edufarm-network
+
+networks:
+  edufarm-network:
+    driver: bridge
+    external: true
+    name: edufarm-network

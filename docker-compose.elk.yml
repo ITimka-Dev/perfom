@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: edufarm-elasticsearch
+    restart: unless-stopped
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=edufarm-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - elk
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: edufarm-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Logstash
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: edufarm-logstash
+    restart: unless-stopped
+    volumes:
+      - ./elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"  # Beats input
+      - "9600:9600"  # Logstash monitoring
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk
+
+  # Filebeat for shipping logs
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: edufarm-filebeat
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - filebeat_data:/usr/share/filebeat/data
+    command: filebeat -e -strict.perms=false
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk
+
+  # Metricbeat for system metrics
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:8.11.0
+    container_name: edufarm-metricbeat
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./elk/metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+      - metricbeat_data:/usr/share/metricbeat/data
+    command: metricbeat -e -strict.perms=false -system.hostfs=/hostfs
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk
+
+  # APM Server for application performance monitoring
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.11.0
+    container_name: edufarm-apm-server
+    restart: unless-stopped
+    volumes:
+      - ./elk/apm-server/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    ports:
+      - "8200:8200"
+    environment:
+      - output.elasticsearch.hosts=["elasticsearch:9200"]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk
+
+volumes:
+  elasticsearch_data:
+  filebeat_data:
+  metricbeat_data:
+
+networks:
+  elk:
+    driver: bridge

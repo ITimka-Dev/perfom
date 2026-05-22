@@ -1,0 +1,7 @@
+project_id = "uepcuigiegeqefgrpifu"
+
+[functions.send-overdue-reminders]
+verify_jwt = false
+
+[functions.generate-weekly-reports]
+verify_jwt = false

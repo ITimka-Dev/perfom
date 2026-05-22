@@ -1,0 +1,91 @@
+name: Visual Regression Testing
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  visual-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for baseline comparison
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      
+      - name: Run visual regression tests
+        run: npx playwright test --config=playwright-visual.config.ts
+        env:
+          VITE_API_URL: http://localhost:5173
+      
+      - name: Upload visual test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-visual-report
+          path: playwright-report/visual/
+          retention-days: 30
+      
+      - name: Upload test failure screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-test-failures
+          path: test-results/
+          retention-days: 30
+      
+      - name: Comment PR with visual diff results
+        uses: daun/playwright-report-comment@v3
+        if: always() && github.event_name == 'pull_request'
+        with:
+          report-path: playwright-report/visual
+
+  update-baselines:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      
+      - name: Update visual baselines
+        run: npx playwright test --config=playwright-visual.config.ts --update-snapshots
+      
+      - name: Commit updated baselines
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add e2e/visual/**/*.png
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update visual regression baselines [skip ci]"
+          git push

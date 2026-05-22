@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: edufarm
+  labels:
+    name: edufarm
+    environment: production

@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Agro-themed color palette */
+    --background: 0 0% 100%;
+    --foreground: 142 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 142 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 142 30% 15%;
+
+    /* Primary: Rich Green (agro theme) */
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 142 71% 45%;
+
+    /* Secondary: Sunny Yellow */
+    --secondary: 48 96% 53%;
+    --secondary-foreground: 142 30% 15%;
+
+    /* Accent: Warm Brown (earth) */
+    --accent: 38 50% 60%;
+    --accent-foreground: 142 30% 15%;
+
+    --muted: 142 20% 96%;
+    --muted-foreground: 142 15% 45%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 142 20% 90%;
+    --input: 142 20% 90%;
+    --ring: 142 76% 36%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 71% 45%));
+    --gradient-secondary: linear-gradient(135deg, hsl(48 96% 53%), hsl(45 93% 47%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 36%), hsl(48 96% 53%));
+    --gradient-earth: linear-gradient(180deg, hsl(38 50% 60%), hsl(32 45% 55%));
+    
+    /* Shadows */
+    --shadow-glow: 0 0 40px hsl(142 71% 45% / 0.3);
+    --shadow-card: 0 10px 30px -10px hsl(142 30% 15% / 0.1);
+    --shadow-elevated: 0 20px 50px -15px hsl(142 30% 15% / 0.15);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 142 20% 98%;
+    --sidebar-foreground: 142 30% 20%;
+    --sidebar-primary: 142 76% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 142 20% 95%;
+    --sidebar-accent-foreground: 142 30% 20%;
+    --sidebar-border: 142 20% 90%;
+    --sidebar-ring: 142 76% 36%;
+  }
+
+  .dark {
+    --background: 142 30% 8%;
+    --foreground: 142 15% 95%;
+
+    --card: 142 25% 12%;
+    --card-foreground: 142 15% 95%;
+
+    --popover: 142 25% 12%;
+    --popover-foreground: 142 15% 95%;
+
+    --primary: 142 71% 45%;
+    --primary-foreground: 142 30% 8%;
+    --primary-glow: 142 76% 55%;
+
+    --secondary: 48 96% 53%;
+    --secondary-foreground: 142 30% 8%;
+
+    --accent: 38 50% 50%;
+    --accent-foreground: 142 15% 95%;
+
+    --muted: 142 20% 18%;
+    --muted-foreground: 142 15% 65%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 142 15% 95%;
+
+    --border: 142 20% 20%;
+    --input: 142 20% 20%;
+    --ring: 142 71% 45%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 71% 35%), hsl(142 76% 45%));
+    --gradient-secondary: linear-gradient(135deg, hsl(48 96% 53%), hsl(45 93% 47%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 71% 35%), hsl(48 96% 53%));
+    --gradient-earth: linear-gradient(180deg, hsl(38 50% 40%), hsl(32 45% 35%));
+    
+    --shadow-glow: 0 0 40px hsl(142 76% 45% / 0.4);
+    --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.3);
+    --shadow-elevated: 0 20px 50px -15px hsl(0 0% 0% / 0.4);
+
+    --sidebar-background: 142 25% 10%;
+    --sidebar-foreground: 142 15% 90%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 142 30% 8%;
+    --sidebar-accent: 142 20% 18%;
+    --sidebar-accent-foreground: 142 15% 90%;
+    --sidebar-border: 142 20% 20%;
+    --sidebar-ring: 142 71% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+}
+
+@layer components {
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .card-hover {
+    transition: var(--transition-smooth);
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .glow-effect {
+    box-shadow: var(--shadow-glow);
+  }
+}

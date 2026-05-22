@@ -1,0 +1,517 @@
+# 🌾 EduFarm — Образовательная платформа с геймификацией
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/ITimkaCommunity/smart-agro-quest)
+
+**EduFarm** — образовательная платформа, объединяющая обучение с элементами фермерского симулятора и виртуального питомца (Тамагочи). Платформа мотивирует учеников через систему достижений, прогресса и интерактивных заданий по различным предметам.
+
+> **Репозиторий:** https://github.com/ITimkaCommunity/smart-agro-quest
+
+---
+
+## 📋 Содержание
+
+- [Архитектура](#-архитектура)
+- [Технологический стек](#-технологический-стек)
+- [Быстрый старт](#-быстрый-старт)
+- [Структура проекта](#-структура-проекта)
+- [Основные модули](#-основные-модули)
+- [API документация](#-api-документация)
+- [WebSocket события](#-websocket-события)
+- [База данных](#-база-данных)
+- [Безопасность](#-безопасность)
+- [Развёртывание](#-развёртывание)
+- [Тестирование](#-тестирование)
+- [Зависимости от платформ](#-зависимости-от-платформ)
+- [Интеграция с AI](#-интеграция-с-ai)
+
+---
+
+## 🏗️ Архитектура
+
+Проект построен как **модульный монолит** (NestJS backend) с возможностью извлечения модулей в микросервисы.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Клиенты                              │
+│   Browser (React SPA)    │    Mobile (будущее)              │
+└─────────────┬───────────────────────┬───────────────────────┘
+              │ HTTP/WS               │
+              ▼                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Nginx (Reverse Proxy)                     │
+│                  Load Balancing + SSL                        │
+└─────────────┬───────────────────────┬───────────────────────┘
+              │                       │
+    ┌─────────▼─────────┐   ┌────────▼──────────┐
+    │   React Frontend  │   │   NestJS Backend   │
+    │   (Vite + TS)     │   │   (REST + WS)      │
+    │   Port: 5173      │   │   Port: 3001        │
+    └───────────────────┘   └────────┬──────────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    ▼                ▼                ▼
+            ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+            │  PostgreSQL  │ │    Redis     │ │   MinIO/S3   │
+            │  (TypeORM)   │ │  Cache + WS  │ │  File Store  │
+            │  Port: 5432  │ │  Port: 6379  │ │  Port: 9000  │
+            └──────────────┘ └──────────────┘ └──────────────┘
+                                                     │
+                                              ┌──────▼──────┐
+                                              │  FastAPI     │
+                                              │  AI Copilot  │
+                                              │  (в разраб.) │
+                                              └─────────────┘
+```
+
+### Ключевые принципы
+- **Модульная архитектура** — каждый NestJS-модуль может быть извлечён как микросервис
+- **API-first** — весь frontend работает через REST API (`src/lib/api-client.ts`), без прямых обращений к БД
+- **Real-time** — WebSocket гейтвеи для Farm, Pet и Tasks
+- **Автономность** — проект полностью работает без Supabase/Lovable (см. [Зависимости](#-зависимости-от-платформ))
+
+---
+
+## 🚀 Технологический стек
+
+### Frontend
+| Технология | Версия | Назначение |
+|------------|--------|------------|
+| React | 18.3 | UI-фреймворк |
+| TypeScript | 5.x | Типизация |
+| Vite | 5.x | Сборщик |
+| Tailwind CSS | 3.4 | Стили |
+| shadcn/ui | latest | UI-компоненты (45+) |
+| TanStack Query | 5.83 | Управление запросами |
+| React Router | 6.30 | Маршрутизация |
+| Socket.IO Client | 4.8 | WebSocket |
+| Recharts | 2.15 | Графики и аналитика |
+| Zod | 3.25 | Валидация |
+
+### Backend
+| Технология | Версия | Назначение |
+|------------|--------|------------|
+| NestJS | 10.x | Backend-фреймворк |
+| TypeORM | 0.3.x | ORM для PostgreSQL |
+| Passport + JWT | latest | Аутентификация |
+| Socket.IO | 4.8 | WebSocket сервер |
+| Redis (ioredis) | 5.8 | Кэш + WS adapter |
+| Winston | 3.18 | Логирование |
+| Swagger | 11.x | API документация |
+| Multer | 2.0 | Загрузка файлов |
+| class-validator | latest | Валидация DTO |
+| prom-client | 15.1 | Метрики Prometheus |
+
+### Инфраструктура
+| Технология | Назначение |
+|------------|------------|
+| Docker + Docker Compose | Контейнеризация |
+| Nginx | Reverse proxy + балансировка |
+| PostgreSQL 15 | Основная БД |
+| Redis 7 | Кэш + WebSocket pub/sub |
+| MinIO | S3-совместимое хранилище файлов |
+| GitHub Actions | CI/CD |
+| Kubernetes | Production-оркестрация (манифесты готовы) |
+| Prometheus + Grafana | Мониторинг (конфигурация готова) |
+| ELK Stack | Логирование (конфигурация готова) |
+
+---
+
+## ⚡ Быстрый старт
+
+### Предварительные требования
+- Docker и Docker Compose
+- Node.js >= 18.x (для локальной разработки)
+
+### Вариант 1: Docker (рекомендуется)
+
+```bash
+# Клонирование
+git clone https://github.com/ITimkaCommunity/smart-agro-quest.git
+cd smart-agro-quest
+
+# Запуск всех сервисов
+docker-compose up -d
+
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:3001
+# Swagger UI: http://localhost:3001/api
+# MinIO Console: http://localhost:9001
+```
+
+### Вариант 2: Локальная разработка
+
+```bash
+# Frontend
+npm install
+npm run dev
+# → http://localhost:5173
+
+# Backend (в другом терминале)
+cd backend
+npm install
+cp .env.example .env   # Настроить переменные окружения
+npm run start:dev
+# → http://localhost:3001
+
+# Заполнение БД тестовыми данными
+npm run seed
+```
+
+### Переменные окружения
+
+#### Frontend (.env)
+```env
+VITE_BACKEND_URL=http://localhost:3001
+```
+
+#### Backend (backend/.env)
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=edufarm
+JWT_SECRET=your-secret-key-min-32-chars
+JWT_EXPIRES_IN=7d
+CORS_ORIGIN=http://localhost:5173
+PORT=3001
+NODE_ENV=development
+REDIS_HOST=localhost
+REDIS_PORT=6379
+STORAGE_TYPE=local
+UPLOAD_DIR=./uploads
+```
+
+---
+
+## 📁 Структура проекта
+
+```
+smart-agro-quest/
+├── src/                        # React Frontend
+│   ├── components/             # UI-компоненты (50+)
+│   │   ├── achievements/       # Карточки достижений
+│   │   ├── analytics/          # Графики и аналитика
+│   │   ├── auth/               # Защита маршрутов
+│   │   ├── chat/               # AI Copilot (UI)
+│   │   ├── farm/               # Ферма (9 компонентов)
+│   │   ├── layout/             # Header, WebSocket индикатор
+│   │   ├── teacher/            # Инструменты учителя
+│   │   └── ui/                 # shadcn/ui (45+ компонентов)
+│   ├── pages/                  # 17 страниц
+│   ├── hooks/                  # 11 custom hooks
+│   ├── contexts/               # AuthContext
+│   ├── lib/                    # API client, утилиты
+│   └── integrations/           # ⚠️ Остатки Supabase (не используются)
+│
+├── backend/                    # NestJS Backend
+│   ├── src/
+│   │   ├── modules/            # 12 бизнес-модулей
+│   │   │   ├── auth/           # JWT + Passport
+│   │   │   ├── users/          # Профили + роли
+│   │   │   ├── tasks/          # Задания + оценки + WebSocket
+│   │   │   ├── farm/           # Ферма + WebSocket
+│   │   │   ├── pet/            # Тамагочи + WebSocket
+│   │   │   ├── achievements/   # Достижения
+│   │   │   ├── progress/       # Прогресс по зонам
+│   │   │   ├── zones/          # Учебные зоны
+│   │   │   ├── groups/         # Группы студентов
+│   │   │   ├── storage/        # Загрузка файлов
+│   │   │   ├── monitoring/     # Метрики + админ-статистика
+│   │   │   └── health/         # Health checks
+│   │   ├── common/             # Guards, Filters, Interceptors
+│   │   ├── config/             # Redis, Winston, TypeORM
+│   │   └── database/seeds/     # Начальные данные
+│   └── test/                   # E2E тесты (13 файлов)
+│
+├── e2e/                        # Playwright E2E тесты
+├── k8s/                        # Kubernetes манифесты
+├── monitoring/                 # Prometheus + Grafana конфигурация
+├── elk/                        # ELK Stack конфигурация
+├── postgres/                   # PostgreSQL HA конфигурация
+├── docker-compose.yml          # Основной docker-compose
+├── docker-compose.monitoring.yml
+├── docker-compose.elk.yml
+└── docker-compose.postgres-ha.yml
+```
+
+---
+
+## 📦 Основные модули
+
+### Роли пользователей
+
+| Роль | Возможности |
+|------|-------------|
+| **student** | Выполнение заданий, ферма, питомец, достижения, лидерборд |
+| **teacher** | Создание заданий, оценивание, группы, аналитика, еженедельные отчёты |
+| **admin** | Управление пользователями, CRUD игровых элементов, системные метрики |
+
+### Готовность модулей
+
+| Модуль | Backend | Frontend | WebSocket | Статус |
+|--------|---------|----------|-----------|--------|
+| Auth | ✅ | ✅ | — | 100% |
+| Users/Profiles | ✅ | ✅ | — | 100% |
+| Tasks + Submissions | ✅ | ✅ | ✅ | 100% |
+| Farm (Plants/Animals/Production) | ✅ | ✅ | ✅ | 100% |
+| Pet (Тамагочи) | ✅ | ✅ | ✅ | 100% |
+| Achievements | ✅ | ✅ | — | 100% |
+| Progress + Leaderboard | ✅ | ✅ | — | 100% |
+| Zones | ✅ | ✅ | — | 100% |
+| Groups | ✅ | ✅ | — | 100% |
+| Storage | ✅ | ✅ | — | 90% (нет MinIO) |
+| Monitoring | ✅ | ✅ | — | 80% |
+| Health | ✅ | — | — | 100% |
+| AI Copilot | ❌ | ✅ (UI) | — | 10% |
+
+---
+
+## 📚 API документация
+
+### Swagger UI
+После запуска backend: **http://localhost:3001/api**
+
+### Основные эндпоинты
+
+#### 🔐 Auth
+```
+POST /auth/signup          — Регистрация
+POST /auth/login           — Вход (возвращает JWT)
+GET  /auth/profile         — Текущий пользователь
+```
+
+#### 👤 Users
+```
+GET  /users/profile        — Мой профиль
+PUT  /users/profile        — Обновить профиль
+GET  /users/:id            — Профиль по ID
+GET  /users/teacher/stats  — Статистика учителя
+GET  /users/teacher/students — Список студентов
+```
+
+#### 📝 Tasks
+```
+GET    /tasks                         — Все задания
+POST   /tasks                         — Создать (teacher/admin)
+GET    /tasks/:id                     — Задание по ID
+PATCH  /tasks/:id                     — Обновить
+DELETE /tasks/:id                     — Удалить
+POST   /tasks/:id/submit              — Подать работу
+GET    /tasks/:id/submissions         — Работы по заданию
+PATCH  /tasks/submissions/:id/grade   — Оценить
+POST   /tasks/submissions/:id/comments — Добавить комментарий
+GET    /tasks/templates               — Шаблоны комментариев
+GET    /tasks/analytics/comparative   — Сравнительная аналитика
+```
+
+#### 🌾 Farm
+```
+GET  /farm/inventory                  — Инвентарь
+GET  /farm/items                      — Все предметы
+POST /farm/plants                     — Посадить
+POST /farm/plants/:id/water           — Полить
+POST /farm/plants/:id/harvest         — Собрать урожай
+POST /farm/animals/:id                — Добавить животное
+POST /farm/animals/user/:id/feed      — Покормить
+POST /farm/animals/user/:id/collect   — Собрать продукцию
+POST /farm/production                 — Начать производство
+POST /farm/production/:id/collect     — Собрать результат
+```
+
+#### 🐾 Pet
+```
+GET  /pet            — Мой питомец
+POST /pet            — Создать питомца
+POST /pet/feed       — Покормить
+POST /pet/water      — Напоить
+POST /pet/play       — Поиграть
+POST /pet/use-item   — Использовать предмет
+GET  /pet/shop       — Магазин
+```
+
+#### 🏆 Achievements / Progress / Zones / Groups
+```
+GET  /achievements         — Все достижения
+GET  /achievements/user    — Мои достижения
+GET  /progress/user        — Прогресс по зонам
+GET  /progress/leaderboard — Таблица лидеров
+GET  /zones                — Все зоны
+GET  /groups               — Мои группы (teacher)
+```
+
+---
+
+## 🔌 WebSocket события
+
+### Подключение
+```typescript
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:3001/farm', {
+  auth: { token: 'JWT_TOKEN' }
+});
+socket.emit('joinUserRoom', userId);
+```
+
+### Namespace `/farm`
+| Событие | Описание |
+|---------|----------|
+| `plant:updated` | Растение обновлено (полив) |
+| `plant:harvested` | Урожай собран |
+| `animal:updated` | Животное обновлено |
+| `animal:collected` | Продукция собрана |
+| `production:started` | Производство запущено |
+| `production:completed` | Производство завершено |
+| `inventory:updated` | Инвентарь изменился |
+
+### Namespace `/pet`
+| Событие | Описание |
+|---------|----------|
+| `pet:created` | Питомец создан |
+| `pet:statsUpdated` | Характеристики обновлены |
+| `pet:fed` / `pet:watered` / `pet:played` | Действия с питомцем |
+| `pet:itemUsed` | Использован предмет |
+| `pet:ranAway` | Питомец сбежал |
+
+---
+
+## 🗄️ База данных
+
+### Схема (28 таблиц)
+
+**Пользователи:** `profiles`, `user_roles`, `user_zone_progress`  
+**Задания:** `tasks`, `task_submissions`, `submission_comments`, `comment_templates`  
+**Ферма:** `farm_zones`, `farm_items`, `farm_animals`, `user_inventory`, `user_plants`, `user_farm_animals`, `production_chains`, `production_chain_ingredients`, `user_productions`, `user_farm_slots`  
+**Питомец:** `pets`, `pet_shop_items`, `pet_shop_item_costs`, `user_pet_items`  
+**Достижения:** `achievements`, `user_achievements`  
+**Бустеры:** `zone_boosters`, `user_active_boosters`  
+**Группы:** `student_groups`, `group_members`, `group_tasks`  
+**Отчёты:** `weekly_reports`  
+**Предметы учителя:** `teacher_subjects`
+
+### Система прогресса
+- **1000 XP = 1 уровень**
+- XP за: выполнение заданий, сбор урожая, производство
+- Автоматическая проверка достижений при оценке >= 3
+
+---
+
+## 🔒 Безопасность
+
+| Мера | Статус |
+|------|--------|
+| JWT аутентификация | ✅ |
+| Role-based access (RBAC) | ✅ |
+| Rate limiting (100 req/min) | ✅ |
+| Input validation (class-validator) | ✅ |
+| Password hashing (bcrypt) | ✅ |
+| SQL injection protection (TypeORM) | ✅ |
+| CORS | ✅ |
+| RLS (Row Level Security) | ✅ |
+| HTTPS | ⚠️ Требуется для production |
+| File MIME validation | ⚠️ Только размер |
+| Secrets manager | ⚠️ .env файлы |
+
+---
+
+## 🚢 Развёртывание
+
+### Docker Compose (Development/Staging)
+```bash
+docker-compose up -d                    # Основные сервисы
+docker-compose -f docker-compose.monitoring.yml up -d  # Мониторинг
+docker-compose -f docker-compose.elk.yml up -d         # Логирование
+```
+
+### Kubernetes (Production)
+Манифесты в директории `k8s/`:
+- `deployment.yaml` — Backend + Frontend деплоймент
+- `service.yaml` — Kubernetes сервисы
+- `ingress.yaml` — Nginx Ingress + TLS
+- `hpa.yaml` — Автомасштабирование
+- `configmap.yaml` / `secrets.yaml` — Конфигурация
+
+### CI/CD (GitHub Actions)
+- `.github/workflows/ci-cd.yml` — Линтинг, тесты, сборка, деплой
+- `.github/workflows/visual-regression.yml` — Визуальные регрессионные тесты
+
+---
+
+## 🧪 Тестирование
+
+```bash
+# Backend unit-тесты
+cd backend && npm test
+
+# Backend E2E тесты
+cd backend && npm run test:e2e
+
+# Frontend E2E (Playwright)
+npx playwright test
+
+# Visual regression
+npx playwright test --config=playwright-visual.config.ts
+```
+
+---
+
+## ⚠️ Зависимости от платформ
+
+### Lovable
+**Зависимость: НУЛЕВАЯ.** Проект — стандартный React + NestJS стек. Lovable используется только как IDE/среда разработки. Можно полноценно работать локально или в любой другой IDE.
+
+### Supabase
+**Зависимость: МИНИМАЛЬНАЯ.** Основной бизнес-логики на Supabase нет.
+
+| Компонент | Что используется | Как убрать |
+|-----------|-----------------|------------|
+| `src/integrations/supabase/` | Файлы существуют, но **НЕ импортируются** в бизнес-логику | Удалить директорию |
+| `@supabase/supabase-js` | Установлен в package.json | `npm uninstall` |
+| 2 Edge Functions | `generate-weekly-reports`, `send-overdue-reminders` | Перенести в NestJS (`@nestjs/schedule`) |
+| PostgreSQL | Supabase как хостинг БД | Перевести на любой PostgreSQL |
+
+> Подробнее: [PLATFORM_DEPENDENCIES.md](./PLATFORM_DEPENDENCIES.md)
+
+---
+
+## 🤖 Интеграция с AI
+
+**Статус:** 🟡 В разработке
+
+Планируется AI Copilot на FastAPI (Python) для:
+- Подсказки по заданиям
+- Генерация объяснений
+- Персонализированные рекомендации
+- Анализ прогресса
+
+UI уже готов (`src/components/chat/`), backend — в разработке.
+
+---
+
+## 📈 Общая готовность
+
+| Критерий | Оценка |
+|----------|--------|
+| Функциональность | 85% |
+| Архитектура | 8/10 |
+| Безопасность | 7/10 |
+| Тестовое покрытие | ~60% |
+| Документация | 80% |
+| Production-готовность | 80% |
+| Портируемость (без Supabase/Lovable) | 95% |
+
+---
+
+## 📝 Лицензия
+
+MIT License
+
+## 👥 Авторы
+
+EduFarm Development Team — [ITimkaCommunity](https://github.com/ITimkaCommunity)
+
+---
+
+**Документация обновлена:** 2026-02-14  
+**Lovable проект:** https://lovable.dev/projects/13b98043-3987-4a5f-af82-f403e9f12445

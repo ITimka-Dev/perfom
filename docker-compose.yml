@@ -1,0 +1,203 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: edufarm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: edufarm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Schema will be created by TypeORM migrations
+      # - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: edufarm-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: edufarm-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # MinIO client for creating initial buckets
+  minio-client:
+    image: minio/mc:latest
+    container_name: edufarm-minio-client
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      mc mb myminio/comment-attachments --ignore-existing;
+      mc anonymous set download myminio/comment-attachments;
+      exit 0;
+      "
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edufarm-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rag-service:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: edufarm
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production-min-32-chars}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:5173
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      STORAGE_TYPE: local
+      UPLOAD_DIR: /app/uploads
+      # Connection to RAG microservice
+      # host.docker.internal используется в Docker Desktop для доступа к хост-машине,
+      # где запущен Ollama. RAG-сервис с network_mode: host также доступен по этому адресу.
+      RAG_SERVICE_URL: http://host.docker.internal:8001
+      RAG_TIMEOUT_MS: 120000
+      # For MinIO (S3-compatible) storage:
+      # STORAGE_TYPE: s3
+      # S3_ENDPOINT: http://minio:9000
+      # S3_ACCESS_KEY: minioadmin
+      # S3_SECRET_KEY: minioadmin123
+      # S3_BUCKET: comment-attachments
+    ports:
+      - "3001:3001"
+    volumes:
+      - uploads_data:/app/uploads
+    command: npm run start:prod
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edufarm-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_BACKEND_URL: http://localhost:3001
+    ports:
+      - "5173:5173"
+    # use image CMD (npm run preview -- --host 0.0.0.0)
+
+  nginx:
+    image: nginx:alpine
+    container_name: edufarm-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - uploads_data:/usr/share/nginx/html/uploads:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =====================================================================
+  # RAG microservice (FastAPI + ChromaDB + Ollama proxy)
+  # Ollama runs on the Windows HOST.
+  # host.docker.internal — специальный DNS Docker Desktop для доступа к хосту Windows.
+  # network_mode: host не работает на Windows/macOS, поэтому используем порт + extra_hosts.
+  # =====================================================================
+  rag-service:
+    build:
+      context: ./rag-service
+      dockerfile: Dockerfile
+    container_name: edufarm-rag-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./rag-service/data/chroma_db:/app/data/chroma_db
+      - ./rag-service/data/textbooks:/app/data/textbooks
+    environment:
+      LLM_PROVIDER: ollama
+      EMBEDDING_FUNCTION: ${EMBEDDING_FUNCTION:-onnx_minilm_l6_v2}
+      # host.docker.internal резолвится в IP хост-машины Windows, где запущен Ollama
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-3b-instruct-q4km}
+      OLLAMA_TEMPERATURE: ${OLLAMA_TEMPERATURE:-0.2}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-4096}
+      OLLAMA_NUM_PREDICT: ${OLLAMA_NUM_PREDICT:-700}
+      RETRIEVAL_DISTANCE_THRESHOLD: ${RETRIEVAL_DISTANCE_THRESHOLD:-1.2}
+      RETRIEVAL_FETCH_MULTIPLIER: ${RETRIEVAL_FETCH_MULTIPLIER:-3}
+      RETRIEVAL_MAX_CHUNKS_PER_TEXTBOOK: ${RETRIEVAL_MAX_CHUNKS_PER_TEXTBOOK:-2}
+      CHROMA_DB_PATH: /app/data/chroma_db
+      CHROMA_RESET_ON_SCHEMA_ERROR: ${CHROMA_RESET_ON_SCHEMA_ERROR:-true}
+      HOST: 0.0.0.0
+      PORT: 8001
+      ENABLE_METRICS: "true"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  uploads_data:
+    driver: local

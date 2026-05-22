@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edufarm-config
+  namespace: edufarm
+data:
+  # Database
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_DATABASE: "edufarm"
+  
+  # Redis
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  
+  # Storage (MinIO)
+  STORAGE_TYPE: "s3"
+  S3_ENDPOINT: "http://minio:9000"
+  S3_BUCKET: "comment-attachments"
+  S3_REGION: "us-east-1"
+  
+  # Application
+  BACKEND_URL: "https://api.edufarm.example.com"
+  CORS_ORIGIN: "https://edufarm.example.com"
+  JWT_EXPIRES_IN: "7d"
+  
+  # Rate Limiting
+  THROTTLE_TTL: "60000"
+  THROTTLE_LIMIT: "100"
+  
+  # Logging
+  LOG_LEVEL: "info"

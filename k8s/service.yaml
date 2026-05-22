@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: edufarm-backend
+  namespace: edufarm
+  labels:
+    app: edufarm-backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3001
+    targetPort: 3001
+    protocol: TCP
+    name: http
+  selector:
+    app: edufarm-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edufarm-frontend
+  namespace: edufarm
+  labels:
+    app: edufarm-frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 5173
+    protocol: TCP
+    name: http
+  selector:
+    app: edufarm-frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: edufarm
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: edufarm
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  selector:
+    app: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: edufarm
+  labels:
+    app: minio
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9000
+    targetPort: 9000
+    protocol: TCP
+    name: api
+  - port: 9001
+    targetPort: 9001
+    protocol: TCP
+    name: console
+  selector:
+    app: minio

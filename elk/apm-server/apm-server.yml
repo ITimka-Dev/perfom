@@ -1,0 +1,21 @@
+apm-server:
+  host: "0.0.0.0:8200"
+  rum:
+    enabled: true
+    allow_origins: ['*']
+  
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  indices:
+    - index: "apm-edufarm-%{[observer.version]}-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "kibana:5601"
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/apm-server
+  name: apm-server
+  keepfiles: 7
+  permissions: 0644
