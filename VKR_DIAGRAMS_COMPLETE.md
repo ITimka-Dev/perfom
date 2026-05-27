@@ -901,12 +901,6 @@ flowchart TD
     PersonalPlan --> Progress[Отслеживание прогресса]
     Progress --> Report[Еженедельный отчёт]
     Report --> End([Продолжение обучения])
-    
-    style XP fill:#ffd700
-    style Achieve fill:#ffd700
-    style NewLevel fill:#ffd700
-    style AIChat fill:#90caf9
-    style AutoCheck fill:#a5d6a7
 ```
 
 ## 19) IDEF0 — Контекстная диаграмма системы
