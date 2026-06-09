@@ -54,4 +54,15 @@ export class CreateTaskDto {
   @IsArray()
   @IsString({ each: true })
   attachmentUrls?: string[];
+
+  @ApiProperty({
+    description: 'Allowed student submission file extensions, without dots',
+    required: false,
+    type: [String],
+    example: ['pdf', 'docx', 'png'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedSubmissionFileTypes?: string[];
 }

@@ -300,6 +300,26 @@ export const storageApi = {
     
     return response.json();
   },
+  uploadSubmissionAttachment: async (taskId: string, file: File) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${BACKEND_URL}/storage/task/${taskId}/submission-upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message);
+    }
+
+    return response.json();
+  },
   uploadCommentAttachment: async (submissionId: string, file: File) => {
     const token = getAuthToken();
     const formData = new FormData();

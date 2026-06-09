@@ -6,7 +6,7 @@ import { Pet } from './entities/pet.entity';
 import { PetShopItem } from './entities/pet-shop-item.entity';
 import { UserPetItem } from './entities/user-pet-item.entity';
 import { PetGateway } from './pet.gateway';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreatePetDto } from './dto/create-pet.dto';
 
 describe('PetService', () => {
@@ -77,6 +77,10 @@ describe('PetService', () => {
     petGateway = module.get<PetGateway>(PetGateway);
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
@@ -116,25 +120,36 @@ describe('PetService', () => {
       expect(petGateway.notifyPetCreated).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if pet already exists', async () => {
+    it('should throw BadRequestException if pet already exists', async () => {
       jest.spyOn(petsRepository, 'findOne').mockResolvedValue(mockPet as Pet);
 
       const createPetDto: CreatePetDto = { name: 'Fluffy', type: 'cow' };
       await expect(
         service.createPet('user-1', createPetDto)
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('feedPet', () => {
-    it('should feed pet and increase hunger', async () => {
-      jest.spyOn(petsRepository, 'findOne').mockResolvedValue(mockPet as Pet);
-      jest.spyOn(petsRepository, 'save').mockResolvedValue({ ...mockPet, hunger: 100 } as Pet);
+    it('should feed pet and increase hunger by a random value from 3 to 7', async () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      jest.spyOn(petsRepository, 'findOne').mockResolvedValue({ ...mockPet, hunger: 80 } as Pet);
+      jest.spyOn(petsRepository, 'save').mockImplementation(async (pet) => pet as Pet);
+
+      const result = await service.feedPet('user-1');
+
+      expect(result.hunger).toBe(83);
+      expect(petGateway.notifyPetFed).toHaveBeenCalled();
+    });
+
+    it('should cap hunger at 100 when feeding', async () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.99);
+      jest.spyOn(petsRepository, 'findOne').mockResolvedValue({ ...mockPet, hunger: 98 } as Pet);
+      jest.spyOn(petsRepository, 'save').mockImplementation(async (pet) => pet as Pet);
 
       const result = await service.feedPet('user-1');
 
       expect(result.hunger).toBe(100);
-      expect(petGateway.notifyPetFed).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if pet not found', async () => {
@@ -145,25 +160,27 @@ describe('PetService', () => {
   });
 
   describe('waterPet', () => {
-    it('should water pet and increase thirst', async () => {
-      jest.spyOn(petsRepository, 'findOne').mockResolvedValue(mockPet as Pet);
-      jest.spyOn(petsRepository, 'save').mockResolvedValue({ ...mockPet, thirst: 100 } as Pet);
+    it('should water pet and increase thirst by a random value from 3 to 7', async () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      jest.spyOn(petsRepository, 'findOne').mockResolvedValue({ ...mockPet, thirst: 70 } as Pet);
+      jest.spyOn(petsRepository, 'save').mockImplementation(async (pet) => pet as Pet);
 
       const result = await service.waterPet('user-1');
 
-      expect(result.thirst).toBe(100);
+      expect(result.thirst).toBe(75);
       expect(petGateway.notifyPetWatered).toHaveBeenCalled();
     });
   });
 
   describe('playWithPet', () => {
-    it('should play with pet and increase happiness', async () => {
-      jest.spyOn(petsRepository, 'findOne').mockResolvedValue(mockPet as Pet);
-      jest.spyOn(petsRepository, 'save').mockResolvedValue({ ...mockPet, happiness: 100 } as Pet);
+    it('should play with pet and increase happiness by a random value from 3 to 7', async () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.99);
+      jest.spyOn(petsRepository, 'findOne').mockResolvedValue({ ...mockPet, happiness: 90 } as Pet);
+      jest.spyOn(petsRepository, 'save').mockImplementation(async (pet) => pet as Pet);
 
       const result = await service.playWithPet('user-1');
 
-      expect(result.happiness).toBe(100);
+      expect(result.happiness).toBe(97);
       expect(petGateway.notifyPetPlayed).toHaveBeenCalled();
     });
   });
