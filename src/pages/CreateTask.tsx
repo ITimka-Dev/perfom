@@ -27,6 +27,8 @@ interface Zone {
   zone_type: string;
 }
 
+const SUBMISSION_FORMATS = ["pdf", "doc", "docx", "png", "jpg", "jpeg", "txt", "zip"];
+
 const CreateTask = () => {
   const navigate = useNavigate();
   const { isTeacher, loading: roleLoading } = useUserRole();
@@ -43,6 +45,12 @@ const CreateTask = () => {
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
   const [newAttachment, setNewAttachment] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [allowedSubmissionFileTypes, setAllowedSubmissionFileTypes] = useState<string[]>([
+    "pdf",
+    "docx",
+    "png",
+    "jpg",
+  ]);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -70,6 +78,14 @@ const CreateTask = () => {
   const toggleGrade = (grade: number) => {
     setTargetGrades((prev) =>
       prev.includes(grade) ? prev.filter((g) => g !== grade) : [...prev, grade]
+    );
+  };
+
+  const toggleSubmissionFileType = (fileType: string) => {
+    setAllowedSubmissionFileTypes((prev) =>
+      prev.includes(fileType)
+        ? prev.filter((type) => type !== fileType)
+        : [...prev, fileType]
     );
   };
 
@@ -109,6 +125,7 @@ const CreateTask = () => {
         experienceReward: xpReward,
         targetGrades,
         attachmentUrls,
+        allowedSubmissionFileTypes,
       });
 
       // Upload attachment files if any
@@ -120,17 +137,12 @@ const CreateTask = () => {
           const formData = new FormData();
           formData.append('file', file);
 
-          const uploadResponse = await apiClient.post(
+          const uploadResponse: any = await apiClient.post(
             `/storage/task/${createdTask.id}/upload`,
-            formData,
-            {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-            }
+            formData
           );
 
-          uploadedUrls.push(uploadResponse.data.fileUrl);
+          uploadedUrls.push(uploadResponse.url || uploadResponse.fileUrl || uploadResponse.data?.fileUrl);
         }
 
         // Update task with all attachment URLs
@@ -271,6 +283,23 @@ const CreateTask = () => {
 
               <div className="space-y-2">
                 <Label>Прикрепленные файлы</Label>
+                <div className="space-y-2 rounded-md border p-3">
+                  <Label>Allowed answer file formats</Label>
+                  <div className="flex flex-wrap gap-4">
+                    {SUBMISSION_FORMATS.map((fileType) => (
+                      <div key={fileType} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`format-${fileType}`}
+                          checked={allowedSubmissionFileTypes.includes(fileType)}
+                          onCheckedChange={() => toggleSubmissionFileType(fileType)}
+                        />
+                        <Label htmlFor={`format-${fileType}`} className="cursor-pointer uppercase">
+                          {fileType}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <FileUploadButton
                   onFilesSelected={setAttachmentFiles}
                   maxFiles={5}

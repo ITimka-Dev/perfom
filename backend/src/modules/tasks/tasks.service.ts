@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
@@ -85,6 +85,10 @@ export class TasksService {
 
   async submitTask(taskId: string, userId: string, createSubmissionDto: CreateSubmissionDto): Promise<TaskSubmission> {
     const task = await this.findOne(taskId);
+    this.validateSubmissionAttachments(
+      createSubmissionDto.attachmentUrls || [],
+      task.allowedSubmissionFileTypes || [],
+    );
     
     const submission = this.submissionsRepository.create({
       taskId,
@@ -130,7 +134,8 @@ export class TasksService {
       }
 
       submission.grade = gradeSubmissionDto.grade;
-      submission.teacherFeedback = gradeSubmissionDto.feedback;
+      submission.teacherFeedback =
+        gradeSubmissionDto.feedback ?? gradeSubmissionDto.teacherFeedback;
       submission.status = gradeSubmissionDto.status || 'reviewed';
       submission.reviewedBy = reviewerId;
       submission.reviewedAt = new Date();
@@ -397,5 +402,39 @@ export class TasksService {
     }
 
     return queryBuilder.getRawMany();
+  }
+
+  private validateSubmissionAttachments(
+    attachmentUrls: string[],
+    allowedFileTypes: string[],
+  ): void {
+    const normalizedAllowedTypes = allowedFileTypes
+      .map((type) => type.trim().replace(/^\./, '').toLowerCase())
+      .filter(Boolean);
+
+    if (normalizedAllowedTypes.length === 0 || attachmentUrls.length === 0) {
+      return;
+    }
+
+    for (const attachmentUrl of attachmentUrls) {
+      const extension = this.extractFileExtension(attachmentUrl);
+      if (!extension || !normalizedAllowedTypes.includes(extension)) {
+        throw new BadRequestException(
+          `Attachment type is not allowed. Allowed types: ${normalizedAllowedTypes.join(', ')}`,
+        );
+      }
+    }
+  }
+
+  private extractFileExtension(fileUrl: string): string | null {
+    const withoutQuery = fileUrl.split('?')[0].split('#')[0];
+    const lastSegment = withoutQuery.split('/').pop() || '';
+    const dotIndex = lastSegment.lastIndexOf('.');
+
+    if (dotIndex < 0 || dotIndex === lastSegment.length - 1) {
+      return null;
+    }
+
+    return lastSegment.slice(dotIndex + 1).toLowerCase();
   }
 }

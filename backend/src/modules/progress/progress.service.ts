@@ -125,7 +125,9 @@ export class ProgressService {
       query.andWhere('progress.zone_id = :zoneId', { zoneId });
     }
 
-    const results = await query.getRawMany();
+    const results = (await query.getRawMany()).map((entry) =>
+      this.normalizeLeaderboardEntry(entry),
+    );
 
     // Sort by selected metric
     if (sortBy === 'achievements') {
@@ -139,14 +141,36 @@ export class ProgressService {
     // Add rank
     return results.map((entry, index) => ({
       rank: index + 1,
-      userId: entry.userid,
+      userId: entry.userId,
       name: entry.name,
       email: entry.email,
-      totalScore: parseInt(entry.totalscore || '0', 10),
-      totalAchievements: parseInt(entry.totalachievements || '0', 10),
-      avgGrade: Math.round(parseFloat(entry.avggrade || '0') * 10) / 10,
-      tasksCompleted: parseInt(entry.taskscompleted || '0', 10),
-      level: parseInt(entry.level || '1', 10),
+      totalScore: entry.totalScore,
+      totalAchievements: entry.totalAchievements,
+      avgGrade: Math.round(entry.avgGrade * 10) / 10,
+      tasksCompleted: entry.tasksCompleted,
+      level: entry.level,
     }));
+  }
+
+  private normalizeLeaderboardEntry(entry: Record<string, any>) {
+    return {
+      userId: this.getRawValue(entry, 'userId', 'userid'),
+      name: this.getRawValue(entry, 'name'),
+      email: this.getRawValue(entry, 'email'),
+      totalScore: parseInt(this.getRawValue(entry, 'totalScore', 'totalscore') || '0', 10),
+      totalAchievements: parseInt(this.getRawValue(entry, 'totalAchievements', 'totalachievements') || '0', 10),
+      avgGrade: parseFloat(this.getRawValue(entry, 'avgGrade', 'avggrade') || '0'),
+      tasksCompleted: parseInt(this.getRawValue(entry, 'tasksCompleted', 'taskscompleted') || '0', 10),
+      level: parseInt(this.getRawValue(entry, 'level') || '1', 10),
+    };
+  }
+
+  private getRawValue(entry: Record<string, any>, ...keys: string[]) {
+    for (const key of keys) {
+      if (entry[key] !== undefined && entry[key] !== null) {
+        return entry[key];
+      }
+    }
+    return undefined;
   }
 }

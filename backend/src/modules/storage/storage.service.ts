@@ -153,6 +153,16 @@ export class StorageService implements OnModuleInit {
     return this.uploadFile('comment-attachments', filename, file);
   }
 
+  async uploadSubmissionAttachment(
+    userId: string,
+    taskId: string,
+    file: UploadedFile,
+  ): Promise<string> {
+    const timestamp = Date.now();
+    const filename = `${userId}/${taskId}/${timestamp}-${file.originalname}`;
+    return this.uploadFile('submission-attachments', filename, file);
+  }
+
   async deleteFile(folder: string, filePath: string): Promise<void> {
     if (this.storageType === 'local') {
       await this.deleteFileLocal(folder, filePath);

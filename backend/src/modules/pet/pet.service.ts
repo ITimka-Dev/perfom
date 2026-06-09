@@ -71,7 +71,7 @@ export class PetService {
   async feedPet(userId: string): Promise<Pet> {
     const pet = await this.getPetForAction(userId);
 
-    pet.hunger = Math.min(100, pet.hunger + 30);
+    pet.hunger = this.increasePetStat(pet.hunger);
     pet.lastFedAt = new Date();
 
     const savedPet = await this.petsRepo.save(pet);
@@ -83,7 +83,7 @@ export class PetService {
   async waterPet(userId: string): Promise<Pet> {
     const pet = await this.getPetForAction(userId);
 
-    pet.thirst = Math.min(100, pet.thirst + 30);
+    pet.thirst = this.increasePetStat(pet.thirst);
     pet.lastWateredAt = new Date();
 
     const savedPet = await this.petsRepo.save(pet);
@@ -95,7 +95,7 @@ export class PetService {
   async playWithPet(userId: string): Promise<Pet> {
     const pet = await this.getPetForAction(userId);
 
-    pet.happiness = Math.min(100, pet.happiness + 20);
+    pet.happiness = this.increasePetStat(pet.happiness);
     pet.lastPlayedAt = new Date();
 
     const savedPet = await this.petsRepo.save(pet);
@@ -157,6 +157,11 @@ export class PetService {
       throw new NotFoundException('Pet not found');
     }
     return pet;
+  }
+
+  private increasePetStat(currentValue: number): number {
+    const increase = Math.floor(Math.random() * 5) + 3;
+    return Math.min(100, currentValue + increase);
   }
 
   private async updatePetStats(pet: Pet): Promise<void> {

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trophy, Medal, Award, Star, TrendingUp } from 'lucide-react';
-import { apiClient, zonesApi } from '@/lib/api-client';
+import { progressApi, zonesApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 interface LeaderboardEntry {
@@ -50,11 +50,10 @@ export default function Leaderboard() {
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedZone !== 'all') params.append('zoneId', selectedZone);
-      params.append('sortBy', sortBy);
-
-      const response = await apiClient.get(`/progress/leaderboard?${params.toString()}`);
+      const response = await progressApi.getLeaderboard({
+        zoneId: selectedZone !== 'all' ? selectedZone : undefined,
+        sortBy,
+      });
       setLeaderboard(response);
     } catch (error) {
       console.error('Error loading leaderboard:', error);

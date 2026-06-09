@@ -45,6 +45,9 @@ export class Task {
   @Column({ type: 'text', array: true, default: '{}' })
   attachmentUrls: string[];
 
+  @Column({ type: 'text', array: true, default: '{}' })
+  allowedSubmissionFileTypes: string[];
+
   @Column({ type: 'uuid', nullable: true })
   createdBy: string;
 

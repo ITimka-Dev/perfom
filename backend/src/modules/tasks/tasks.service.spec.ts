@@ -9,7 +9,7 @@ import { CommentTemplate } from './entities/comment-template.entity';
 import { ProgressService } from '../progress/progress.service';
 import { AchievementsService } from '../achievements/achievements.service';
 import { TasksGateway } from './tasks.gateway';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 
 describe('TasksService', () => {
@@ -59,6 +59,11 @@ describe('TasksService', () => {
             save: jest.fn(),
             find: jest.fn(),
             findOne: jest.fn(),
+            manager: {
+              connection: {
+                createQueryRunner: jest.fn(),
+              },
+            },
           },
         },
         {
@@ -146,6 +151,89 @@ describe('TasksService', () => {
       jest.spyOn(tasksRepository, 'findOne').mockResolvedValue(null);
 
       await expect(service.findOne('task-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('submitTask', () => {
+    it('should reject attachments with extensions not allowed by the teacher', async () => {
+      jest.spyOn(tasksRepository, 'findOne').mockResolvedValue({
+        ...mockTask,
+        allowedSubmissionFileTypes: ['pdf', 'png'],
+      } as Task);
+
+      await expect(
+        service.submitTask('task-1', 'student-1', {
+          content: 'My answer',
+          attachmentUrls: ['https://example.com/homework.exe'],
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(submissionsRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should accept attachments with allowed extensions', async () => {
+      const savedSubmission = {
+        ...mockSubmission,
+        fileUrls: ['https://example.com/homework.PDF?download=1'],
+      } as TaskSubmission;
+
+      jest.spyOn(tasksRepository, 'findOne').mockResolvedValue({
+        ...mockTask,
+        allowedSubmissionFileTypes: ['pdf'],
+      } as Task);
+      jest.spyOn(submissionsRepository, 'create').mockReturnValue(savedSubmission);
+      jest.spyOn(submissionsRepository, 'save').mockResolvedValue(savedSubmission);
+
+      const result = await service.submitTask('task-1', 'student-1', {
+        content: 'My answer',
+        attachmentUrls: ['https://example.com/homework.PDF?download=1'],
+      });
+
+      expect(result).toEqual(savedSubmission);
+      expect(submissionsRepository.save).toHaveBeenCalledWith(savedSubmission);
+    });
+  });
+
+  describe('gradeSubmission', () => {
+    it('should save teacherFeedback when client sends teacherFeedback instead of feedback', async () => {
+      const submission = {
+        ...mockSubmission,
+        task: mockTask,
+      } as TaskSubmission;
+      const savedSubmission = {
+        ...submission,
+        status: 'rejected',
+        teacherFeedback: 'Needs more detail',
+      } as TaskSubmission;
+      const queryRunner = {
+        connect: jest.fn(),
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn(),
+        rollbackTransaction: jest.fn(),
+        release: jest.fn(),
+        manager: {
+          findOne: jest.fn().mockResolvedValue(submission),
+          save: jest.fn().mockResolvedValue(savedSubmission),
+        },
+      };
+
+      (submissionsRepository.manager.connection.createQueryRunner as jest.Mock).mockReturnValue(queryRunner);
+
+      const result = await service.gradeSubmission(
+        'submission-1',
+        {
+          status: 'rejected',
+          teacherFeedback: 'Needs more detail',
+        } as any,
+        'teacher-1',
+      );
+
+      expect(result.teacherFeedback).toBe('Needs more detail');
+      expect(queryRunner.manager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teacherFeedback: 'Needs more detail',
+          reviewedBy: 'teacher-1',
+        }),
+      );
     });
   });
 });

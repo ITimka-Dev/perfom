@@ -95,7 +95,7 @@ const ReviewSubmission = () => {
     try {
       await tasksApi.gradeSubmission(submissionId, {
         grade: status === 'reviewed' ? parseInt(grade) : null,
-        teacherFeedback: feedback,
+        feedback,
         status,
       });
 

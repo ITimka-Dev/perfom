@@ -6,9 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { TasksSkeleton } from "@/components/ui/loading-skeleton";
-import { BookOpen, Lock, CheckCircle, Clock } from "lucide-react";
-import { tasksApi } from "@/lib/api-client";
+import { BookOpen, Lock, CheckCircle, Clock, Upload, X } from "lucide-react";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
+import { storageApi, tasksApi } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 interface Task {
@@ -19,6 +24,9 @@ interface Task {
   difficulty: number;
   experienceReward: number;
   requiredLevel: number;
+  instructions?: string;
+  attachmentUrls?: string[];
+  allowedSubmissionFileTypes?: string[];
   status?: string;
 }
 
@@ -28,6 +36,12 @@ const Tasks = () => {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [submissionContent, setSubmissionContent] = useState("");
+  const [submissionUrls, setSubmissionUrls] = useState<string[]>([]);
+  const [newSubmissionUrl, setNewSubmissionUrl] = useState("");
+  const [submissionFiles, setSubmissionFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,6 +96,80 @@ const Tasks = () => {
     enableToasts: false,
   });
 
+  const openSubmissionDialog = (task: Task) => {
+    setSelectedTask(task);
+    setSubmissionContent("");
+    setSubmissionUrls([]);
+    setNewSubmissionUrl("");
+    setSubmissionFiles([]);
+  };
+
+  const closeSubmissionDialog = () => {
+    if (submitting) return;
+    setSelectedTask(null);
+  };
+
+  const addSubmissionUrl = () => {
+    if (!newSubmissionUrl.trim()) return;
+    setSubmissionUrls((prev) => [...prev, newSubmissionUrl.trim()]);
+    setNewSubmissionUrl("");
+  };
+
+  const removeSubmissionUrl = (index: number) => {
+    setSubmissionUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getSubmissionAccept = (task: Task | null) => {
+    const formats = task?.allowedSubmissionFileTypes || [];
+    if (formats.length === 0) return "*";
+    return formats.map((format) => `.${format.replace(/^\./, "")}`).join(",");
+  };
+
+  const handleSubmitTask = async () => {
+    if (!selectedTask) return;
+    if (!submissionContent.trim() && submissionUrls.length === 0 && submissionFiles.length === 0) {
+      toast({
+        title: "РћС€РёР±РєР°",
+        description: "Р”РѕР±Р°РІСЊС‚Рµ С‚РµРєСЃС‚, СЃСЃС‹Р»РєСѓ РёР»Рё С„Р°Р№Р»",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of submissionFiles) {
+        const uploadResponse = await storageApi.uploadSubmissionAttachment(selectedTask.id, file);
+        uploadedUrls.push(uploadResponse.url || uploadResponse.fileUrl);
+      }
+
+      await tasksApi.submitTask(selectedTask.id, {
+        content: submissionContent.trim(),
+        attachmentUrls: [...submissionUrls, ...uploadedUrls],
+      });
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === selectedTask.id ? { ...task, status: "in_progress" } : task,
+        ),
+      );
+      setSelectedTask(null);
+      toast({
+        title: "РЈСЃРїРµС€РЅРѕ",
+        description: "Р—Р°РґР°РЅРёРµ РѕС‚РїСЂР°РІР»РµРЅРѕ РЅР° РїСЂРѕРІРµСЂРєСѓ",
+      });
+    } catch (error: any) {
+      toast({
+        title: "РћС€РёР±РєР°",
+        description: error.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°РґР°РЅРёРµ",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getDifficultyBadge = (difficulty: number) => {
     const variants = {
       1: { label: "Легко", className: "bg-green-500" },
@@ -100,6 +188,8 @@ const Tasks = () => {
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case "in_progress":
         return <Clock className="h-5 w-5 text-yellow-500" />;
+      case "rejected":
+        return <Clock className="h-5 w-5 text-red-500" />;
       case "locked":
         return <Lock className="h-5 w-5 text-muted-foreground" />;
       default:
@@ -188,10 +278,12 @@ const Tasks = () => {
                       <Button
                         disabled={task.status === "locked" || task.status === "completed"}
                         variant={task.status === "in_progress" ? "default" : "outline"}
+                        onClick={() => openSubmissionDialog(task)}
                       >
                         {task.status === "completed" && "Завершено"}
                         {task.status === "locked" && "Заблокировано"}
                         {task.status === "in_progress" && "Продолжить"}
+                        {task.status === "rejected" && "Исправить"}
                         {task.status === "available" && "Начать"}
                       </Button>
                     </div>
@@ -228,7 +320,7 @@ const Tasks = () => {
                         <span>💎 {task.experienceReward} XP</span>
                         <span>⭐ Уровень {task.requiredLevel}+</span>
                       </div>
-                      <Button>Начать</Button>
+                      <Button onClick={() => openSubmissionDialog(task)}>Начать</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -262,7 +354,7 @@ const Tasks = () => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>💎 {task.experienceReward} XP</span>
                       </div>
-                      <Button>Продолжить</Button>
+                      <Button onClick={() => openSubmissionDialog(task)}>Продолжить</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -312,6 +404,117 @@ const Tasks = () => {
             </TabsContent>
           </Tabs>
         </div>
+
+        <Dialog open={!!selectedTask} onOpenChange={(open) => !open && closeSubmissionDialog()}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedTask?.title}</DialogTitle>
+              <DialogDescription>
+                {selectedTask?.description || "Submit your answer for teacher review"}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedTask && (
+              <div className="space-y-4">
+                {selectedTask.instructions && (
+                  <div className="rounded-md bg-muted p-3 text-sm">
+                    {selectedTask.instructions}
+                  </div>
+                )}
+
+                {selectedTask.attachmentUrls && selectedTask.attachmentUrls.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Task files</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTask.attachmentUrls.map((url, index) => (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          File {index + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="submission-content">Answer</Label>
+                  <Textarea
+                    id="submission-content"
+                    value={submissionContent}
+                    onChange={(event) => setSubmissionContent(event.target.value)}
+                    rows={5}
+                    placeholder="Write your answer..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Attach files</Label>
+                  <FileUploadButton
+                    onFilesSelected={setSubmissionFiles}
+                    maxFiles={5}
+                    maxSizeMB={10}
+                    accept={getSubmissionAccept(selectedTask)}
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Allowed formats: {(selectedTask.allowedSubmissionFileTypes || []).join(", ") || "any"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Or add file links</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSubmissionUrl}
+                      onChange={(event) => setNewSubmissionUrl(event.target.value)}
+                      placeholder="https://example.com/homework.pdf"
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addSubmissionUrl();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={addSubmissionUrl} size="icon">
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {submissionUrls.length > 0 && (
+                    <div className="space-y-2">
+                      {submissionUrls.map((url, index) => (
+                        <div key={url} className="flex items-center justify-between gap-2 rounded-md bg-muted p-2">
+                          <span className="truncate text-sm">{url}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeSubmissionUrl(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={closeSubmissionDialog} disabled={submitting}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={handleSubmitTask} disabled={submitting}>
+                    {submitting ? "Submitting..." : "Submit for review"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

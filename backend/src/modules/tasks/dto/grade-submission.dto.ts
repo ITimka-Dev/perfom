@@ -15,6 +15,12 @@ export class GradeSubmissionDto {
   @MaxLength(2000)
   feedback?: string;
 
+  @ApiProperty({ description: 'Teacher feedback, accepted for frontend compatibility', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  teacherFeedback?: string;
+
   @ApiProperty({ description: 'Status of submission', required: false, enum: ['reviewed', 'rejected'] })
   @IsOptional()
   @IsEnum(['reviewed', 'rejected'])

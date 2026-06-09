@@ -6,6 +6,7 @@ import { seedFarmItems } from './farm-items.seed';
 import { seedAchievements } from './achievements.seed';
 import { seedTasks } from './tasks.seed';
 import { seedBoosters } from './boosters.seed';
+import { seedDemoUsers } from './demo-users.seed';
 
 // Load environment variables
 dotenv.config({ path: join(__dirname, '../../.env') });
@@ -45,6 +46,9 @@ async function runSeeds() {
 
     console.log('\n⚡ Seeding boosters...');
     await seedBoosters(dataSource);
+
+    console.log('\nSeeding demo users...');
+    await seedDemoUsers(dataSource);
 
     console.log('\n✅ All seeds completed successfully!');
     console.log('\n📊 Database Summary:');

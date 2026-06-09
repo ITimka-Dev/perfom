@@ -45,7 +45,7 @@ export class StorageController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadTaskAttachment(
     @Param('taskId') taskId: string,
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user: { id: string },
     @UploadedFile() file: UploadedFile,
   ) {
     if (!file) {
@@ -53,7 +53,39 @@ export class StorageController {
     }
 
     const url = await this.storageService.uploadTaskAttachment(
-      user.userId,
+      user.id,
+      taskId,
+      file,
+    );
+
+    return { url };
+  }
+
+  @Post('task/:taskId/submission-upload')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadSubmissionAttachment(
+    @Param('taskId') taskId: string,
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: UploadedFile,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const url = await this.storageService.uploadSubmissionAttachment(
+      user.id,
       taskId,
       file,
     );
@@ -77,7 +109,7 @@ export class StorageController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadCommentAttachment(
     @Param('submissionId') submissionId: string,
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user: { id: string },
     @UploadedFile() file: UploadedFile,
   ) {
     if (!file) {
@@ -85,7 +117,7 @@ export class StorageController {
     }
 
     const url = await this.storageService.uploadCommentAttachment(
-      user.userId,
+      user.id,
       submissionId,
       file,
     );
