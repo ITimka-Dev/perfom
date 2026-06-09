@@ -42,6 +42,7 @@ Thumbs.db
 # Logs and temp files
 *.log
 *.tmp
+rag-service/data/chroma_db/
 
 # Gradle
 .gradle/
