@@ -96,6 +96,10 @@ export class MonitoringController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin/Teacher role required' })
+  getDashboardData() {
+    return this.monitoringService.getDashboardData();
+  }
+
   @Get('admin/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')

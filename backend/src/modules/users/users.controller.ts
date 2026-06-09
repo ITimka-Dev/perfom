@@ -41,12 +41,6 @@ export class UsersController {
     return this.usersService.updateProfile(userId, updateProfileDto);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  async getUserById(@Param('id') id: string) {
-    return this.usersService.findById(id);
-  }
-
   @Get('teacher/subjects')
   @ApiOperation({ summary: 'Get teacher subjects' })
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
@@ -95,5 +89,11 @@ export class UsersController {
     @Query() filters: SubmissionFilterDto,
   ) {
     return this.usersService.getSubmissionsByTeacher(userId, filters);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get user by ID' })
+  async getUserById(@Param('id') id: string) {
+    return this.usersService.findById(id);
   }
 }

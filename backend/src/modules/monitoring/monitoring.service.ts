@@ -199,8 +199,8 @@ export class MonitoringService {
     today.setHours(0, 0, 0, 0);
     const activeToday = await this.submissionsRepository
       .createQueryBuilder('submission')
-      .select('COUNT(DISTINCT submission.user_id)', 'count')
-      .where('submission.submitted_at >= :today', { today })
+      .select('COUNT(DISTINCT submission."userId")', 'count')
+      .where('submission."submittedAt" >= :today', { today })
       .getRawOne();
 
     // Active users this week
@@ -209,8 +209,8 @@ export class MonitoringService {
     weekAgo.setHours(0, 0, 0, 0);
     const activeThisWeek = await this.submissionsRepository
       .createQueryBuilder('submission')
-      .select('COUNT(DISTINCT submission.user_id)', 'count')
-      .where('submission.submitted_at >= :weekAgo', { weekAgo })
+      .select('COUNT(DISTINCT submission."userId")', 'count')
+      .where('submission."submittedAt" >= :weekAgo', { weekAgo })
       .getRawOne();
 
     // Recent activity (last 7 days)

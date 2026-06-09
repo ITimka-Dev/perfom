@@ -156,9 +156,9 @@ export class UsersService {
     // Get pending reviews count
     const pendingReviewsQuery = this.usersRepository
       .createQueryBuilder('user')
-      .innerJoin('task_submissions', 'submission', 'submission.user_id = user.id')
-      .innerJoin('tasks', 'task', 'task.id = submission.task_id')
-      .where('task.zone_id IN (:...zoneIds)', { zoneIds })
+      .innerJoin('task_submissions', 'submission', 'submission."userId" = user.id')
+      .innerJoin('tasks', 'task', 'task.id = submission."taskId"')
+      .where('task."zoneId" IN (:...zoneIds)', { zoneIds })
       .andWhere('submission.status = :status', { status: 'pending' })
       .select('COUNT(submission.id)', 'count');
 
@@ -171,12 +171,12 @@ export class UsersService {
 
     const reviewedTodayQuery = this.usersRepository
       .createQueryBuilder('user')
-      .innerJoin('task_submissions', 'submission', 'submission.user_id = user.id')
-      .innerJoin('tasks', 'task', 'task.id = submission.task_id')
-      .where('task.zone_id IN (:...zoneIds)', { zoneIds })
+      .innerJoin('task_submissions', 'submission', 'submission."userId" = user.id')
+      .innerJoin('tasks', 'task', 'task.id = submission."taskId"')
+      .where('task."zoneId" IN (:...zoneIds)', { zoneIds })
       .andWhere('submission.status = :status', { status: 'reviewed' })
-      .andWhere('submission.reviewed_by = :userId', { userId })
-      .andWhere('submission.reviewed_at >= :today', { today })
+      .andWhere('submission."reviewedBy" = :userId', { userId })
+      .andWhere('submission."reviewedAt" >= :today', { today })
       .select('COUNT(submission.id)', 'count');
 
     const reviewedTodayResult = await reviewedTodayQuery.getRawOne();
@@ -185,9 +185,9 @@ export class UsersService {
     // Get average grade
     const avgGradeQuery = this.usersRepository
       .createQueryBuilder('user')
-      .innerJoin('task_submissions', 'submission', 'submission.user_id = user.id')
-      .innerJoin('tasks', 'task', 'task.id = submission.task_id')
-      .where('task.zone_id IN (:...zoneIds)', { zoneIds })
+      .innerJoin('task_submissions', 'submission', 'submission."userId" = user.id')
+      .innerJoin('tasks', 'task', 'task.id = submission."taskId"')
+      .where('task."zoneId" IN (:...zoneIds)', { zoneIds })
       .andWhere('submission.status = :status', { status: 'reviewed' })
       .andWhere('submission.grade IS NOT NULL')
       .select('AVG(submission.grade)', 'avg');
@@ -257,7 +257,7 @@ export class UsersService {
 
     if (filters?.search) {
       query = query.andWhere(
-        '(user.email ILIKE :search OR profile.full_name ILIKE :search)',
+        '(user.email ILIKE :search OR profile."fullName" ILIKE :search)',
         { search: `%${filters.search}%` },
       );
     }
@@ -283,10 +283,10 @@ export class UsersService {
         // Get average grade
         const avgGradeQuery = this.usersRepository
           .createQueryBuilder('u')
-          .innerJoin('task_submissions', 'submission', 'submission.user_id = u.id')
-          .innerJoin('tasks', 'task', 'task.id = submission.task_id')
+          .innerJoin('task_submissions', 'submission', 'submission."userId" = u.id')
+          .innerJoin('tasks', 'task', 'task.id = submission."taskId"')
           .where('u.id = :userId', { userId: user.id })
-          .andWhere('task.zone_id IN (:...zoneIds)', { zoneIds })
+          .andWhere('task."zoneId" IN (:...zoneIds)', { zoneIds })
           .andWhere('submission.status = :status', { status: 'reviewed' })
           .andWhere('submission.grade IS NOT NULL')
           .select('AVG(submission.grade)', 'avg');
@@ -374,16 +374,16 @@ export class UsersService {
       };
     }
 
-    let query = this.usersRepository
-      .createQueryBuilder('submission')
+    let query = this.usersRepository.manager
+      .createQueryBuilder()
       .from('task_submissions', 'submission')
-      .innerJoin('tasks', 'task', 'task.id = submission.task_id')
-      .innerJoin('users', 'user', 'user.id = submission.user_id')
+      .innerJoin('tasks', 'task', 'task.id = submission."taskId"')
+      .innerJoin('users', 'user', 'user.id = submission."userId"')
       .leftJoin('profiles', 'profile', 'profile.id = user.id')
-      .where('task.zone_id IN (:...zoneIds)', { zoneIds });
+      .where('task."zoneId" IN (:...zoneIds)', { zoneIds });
 
     if (filters?.zoneId) {
-      query = query.andWhere('task.zone_id = :zoneId', {
+      query = query.andWhere('task."zoneId" = :zoneId', {
         zoneId: filters.zoneId,
       });
     }
@@ -395,13 +395,13 @@ export class UsersService {
     }
 
     if (filters?.startDate) {
-      query = query.andWhere('submission.submitted_at >= :startDate', {
+      query = query.andWhere('submission."submittedAt" >= :startDate', {
         startDate: filters.startDate,
       });
     }
 
     if (filters?.endDate) {
-      query = query.andWhere('submission.submitted_at <= :endDate', {
+      query = query.andWhere('submission."submittedAt" <= :endDate', {
         endDate: filters.endDate,
       });
     }
@@ -425,15 +425,15 @@ export class UsersService {
         'submission.id as id',
         'submission.status as status',
         'submission.grade as grade',
-        'submission.submitted_at as submittedAt',
-        'submission.reviewed_at as reviewedAt',
+        'submission."submittedAt" as submittedAt',
+        'submission."reviewedAt" as reviewedAt',
         'task.id as taskId',
         'task.title as taskTitle',
         'user.id as studentId',
         'user.email as studentEmail',
-        'profile.full_name as studentName',
+        'profile."fullName" as studentName',
       ])
-      .orderBy('submission.submitted_at', 'DESC')
+      .orderBy('submission."submittedAt"', 'DESC')
       .offset(skip)
       .limit(limit)
       .getRawMany();

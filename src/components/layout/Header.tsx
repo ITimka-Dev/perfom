@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Menu, User, LogOut, Settings as SettingsIcon, Shield, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 import { WebSocketIndicator } from "@/components/layout/WebSocketIndicator";
 import {
   DropdownMenu,
@@ -20,136 +20,73 @@ interface HeaderProps {
 
 const Header = ({ isWebSocketConnected = false, connectionError = null }: HeaderProps) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ id: string; email: string; fullName: string } | null>(null);
+  const { user, logout } = useAuth();
   const { isTeacher, isAdmin } = useUserRole();
 
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser({
-          id: payload.userId,
-          email: payload.email,
-          fullName: payload.fullName || payload.email,
-        });
-      } catch (error) {
-        console.error('Failed to parse token:', error);
-        setUser(null);
-      }
-    }
-  }, []);
-
-  const handleLogout = async () => {
-    localStorage.removeItem('auth_token');
-    setUser(null);
+  const handleLogout = () => {
+    logout();
     navigate("/");
   };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <span className="text-white font-bold">🌱</span>
-            </div>
-            <span className="text-xl font-bold gradient-text">Умная ферма</span>
+        <button
+          type="button"
+          className="flex items-center gap-2"
+          onClick={() => navigate(user ? (isAdmin ? "/admin" : isTeacher ? "/teacher" : "/dashboard") : "/")}
+        >
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+            <span className="text-white font-bold">🌱</span>
           </div>
-        </div>
+          <span className="text-xl font-bold gradient-text">Умная ферма</span>
+        </button>
 
         {user && (
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-3">
             {isAdmin ? (
               <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/admin")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/admin")} className="text-sm font-medium">
                   <Shield className="mr-2 h-4 w-4" />
                   Админ-панель
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/teacher")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/teacher")} className="text-sm font-medium">
                   Кабинет учителя
                 </Button>
               </>
             ) : isTeacher ? (
               <>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate("/teacher")}
-                    className="text-sm font-medium"
-                  >
-                    Кабинет учителя
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate("/teacher/groups")}
-                    className="text-sm font-medium"
-                  >
-                    Группы учеников
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate("/tasks")}
-                    className="text-sm font-medium"
-                  >
-                    Управление заданиями
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate("/teacher/reports")}
-                    className="text-sm font-medium"
-                  >
-                    Отчеты
-                  </Button>
+                <Button variant="ghost" onClick={() => navigate("/teacher")} className="text-sm font-medium">
+                  Кабинет учителя
+                </Button>
+                <Button variant="ghost" onClick={() => navigate("/teacher/groups")} className="text-sm font-medium">
+                  Группы
+                </Button>
+                <Button variant="ghost" onClick={() => navigate("/teacher/create-task")} className="text-sm font-medium">
+                  Создать задание
+                </Button>
+                <Button variant="ghost" onClick={() => navigate("/teacher/reports")} className="text-sm font-medium">
+                  Отчеты
+                </Button>
               </>
             ) : (
               <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/dashboard")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/dashboard")} className="text-sm font-medium">
                   Дашборд
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/leaderboard")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/leaderboard")} className="text-sm font-medium">
                   Рейтинг
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/farm")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/farm")} className="text-sm font-medium">
                   Ферма
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/pet")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/pet")} className="text-sm font-medium">
                   Питомец
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/tasks")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/tasks")} className="text-sm font-medium">
                   Задания
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/achievements")}
-                  className="text-sm font-medium"
-                >
+                <Button variant="ghost" onClick={() => navigate("/achievements")} className="text-sm font-medium">
                   <Trophy className="mr-1 h-4 w-4" />
                   Достижения
                 </Button>
@@ -160,15 +97,16 @@ const Header = ({ isWebSocketConnected = false, connectionError = null }: Header
 
         <div className="flex items-center gap-2">
           {user && (
-            <WebSocketIndicator 
-              isConnected={isWebSocketConnected} 
+            <WebSocketIndicator
+              isConnected={isWebSocketConnected}
               connectionError={connectionError}
             />
           )}
-          
+
           <Button variant="ghost" size="icon" className="md:hidden">
             <Menu className="h-5 w-5" />
           </Button>
+
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -187,9 +125,7 @@ const Header = ({ isWebSocketConnected = false, connectionError = null }: Header
                   )}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
-                  Профиль
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>Профиль</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <SettingsIcon className="h-4 w-4 mr-2" />
                   Настройки
@@ -201,36 +137,20 @@ const Header = ({ isWebSocketConnected = false, connectionError = null }: Header
                       <Shield className="h-4 w-4 mr-2" />
                       Админ-панель
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/teacher")}>
-                      Кабинет учителя
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/teacher")}>Кабинет учителя</DropdownMenuItem>
                   </>
                 ) : isTeacher ? (
                   <>
-                    <DropdownMenuItem onClick={() => navigate("/teacher")}>
-                      Кабинет учителя
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/tasks")}>
-                      Управление заданиями
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/teacher/reports")}>
-                      Отчеты
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/teacher")}>Кабинет учителя</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/teacher/create-task")}>Создать задание</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/teacher/reports")}>Отчеты</DropdownMenuItem>
                   </>
                 ) : (
                   <>
-                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                      Дашборд
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/farm")}>
-                      Интерактивная ферма
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/pet")}>
-                      Мой тамагочи
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/tasks")}>
-                      Задания
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>Дашборд</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/farm")}>Интерактивная ферма</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/pet")}>Мой питомец</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/tasks")}>Задания</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/achievements")}>
                       <Trophy className="h-4 w-4 mr-2" />
                       Достижения
