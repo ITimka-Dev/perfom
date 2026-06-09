@@ -46,12 +46,6 @@ export class TasksController {
     return this.tasksService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get task by ID' })
-  findOne(@Param('id') id: string) {
-    return this.tasksService.findOne(id);
-  }
-
   @Patch(':id')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update task' })
@@ -203,5 +197,11 @@ export class TasksController {
   @ApiOperation({ summary: 'Get comparative analytics between zones and periods' })
   getComparativeAnalytics(@Query() query: any) {
     return this.tasksService.getComparativeAnalytics(query);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get task by ID' })
+  findOne(@Param('id') id: string) {
+    return this.tasksService.findOne(id);
   }
 }

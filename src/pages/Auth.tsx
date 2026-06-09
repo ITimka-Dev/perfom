@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { getDefaultRouteForRole } from "@/lib/roles";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { login, signup, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, signup, user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -21,21 +23,21 @@ const Auth = () => {
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      navigate("/dashboard");
+      navigate(getDefaultRouteForRole(user?.role), { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, user?.role]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignIn = async (event: FormEvent) => {
+    event.preventDefault();
     setLoading(true);
 
     try {
-      await login(email, password);
+      const signedInUser = await login(email, password);
       toast({
         title: "Добро пожаловать!",
         description: "Вы успешно вошли в систему",
       });
-      navigate("/dashboard");
+      navigate(getDefaultRouteForRole(signedInUser.role), { replace: true });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -47,8 +49,8 @@ const Auth = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignUp = async (event: FormEvent) => {
+    event.preventDefault();
     setLoading(true);
 
     try {
@@ -57,7 +59,7 @@ const Auth = () => {
         title: "Регистрация успешна!",
         description: "Добро пожаловать в систему!",
       });
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -116,7 +118,7 @@ const Auth = () => {
                     type="email"
                     placeholder="your@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(event) => setEmail(event.target.value)}
                     required
                   />
                 </div>
@@ -127,7 +129,7 @@ const Auth = () => {
                     type="password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(event) => setPassword(event.target.value)}
                     required
                     minLength={6}
                   />
@@ -148,7 +150,7 @@ const Auth = () => {
                     type="text"
                     placeholder="Иван Иванов"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(event) => setFullName(event.target.value)}
                     required
                   />
                 </div>
@@ -159,7 +161,7 @@ const Auth = () => {
                     type="email"
                     placeholder="your@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(event) => setEmail(event.target.value)}
                     required
                   />
                 </div>
@@ -170,7 +172,7 @@ const Auth = () => {
                     type="password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(event) => setPassword(event.target.value)}
                     required
                     minLength={6}
                   />

@@ -39,19 +39,19 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student"]}><Dashboard /></ProtectedRoute>} />
               <Route path="/farm" element={<ProtectedRoute><Farm /></ProtectedRoute>} />
               <Route path="/pet" element={<ProtectedRoute><Pet /></ProtectedRoute>} />
               <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-              <Route path="/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
-              <Route path="/teacher/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
-              <Route path="/teacher/submission/:submissionId" element={<ProtectedRoute><ReviewSubmission /></ProtectedRoute>} />
-              <Route path="/teacher/student/:studentId" element={<ProtectedRoute><StudentDetailStats /></ProtectedRoute>} />
-              <Route path="/teacher/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
-              <Route path="/teacher/reports" element={<ProtectedRoute><WeeklyReports /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/teacher" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><TeacherDashboard /></ProtectedRoute>} />
+              <Route path="/teacher/create-task" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><CreateTask /></ProtectedRoute>} />
+              <Route path="/teacher/submission/:submissionId" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><ReviewSubmission /></ProtectedRoute>} />
+              <Route path="/teacher/student/:studentId" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><StudentDetailStats /></ProtectedRoute>} />
+              <Route path="/teacher/groups" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><Groups /></ProtectedRoute>} />
+              <Route path="/teacher/reports" element={<ProtectedRoute allowedRoles={["teacher", "admin"]}><WeeklyReports /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

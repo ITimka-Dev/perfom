@@ -129,8 +129,8 @@ const Tasks = () => {
     if (!selectedTask) return;
     if (!submissionContent.trim() && submissionUrls.length === 0 && submissionFiles.length === 0) {
       toast({
-        title: "РћС€РёР±РєР°",
-        description: "Р”РѕР±Р°РІСЊС‚Рµ С‚РµРєСЃС‚, СЃСЃС‹Р»РєСѓ РёР»Рё С„Р°Р№Р»",
+        title: "Ошибка",
+        description: "Добавьте текст, ссылку или файл",
         variant: "destructive",
       });
       return;
@@ -156,13 +156,13 @@ const Tasks = () => {
       );
       setSelectedTask(null);
       toast({
-        title: "РЈСЃРїРµС€РЅРѕ",
-        description: "Р—Р°РґР°РЅРёРµ РѕС‚РїСЂР°РІР»РµРЅРѕ РЅР° РїСЂРѕРІРµСЂРєСѓ",
+        title: "Успешно",
+        description: "Задание отправлено на проверку",
       });
     } catch (error: any) {
       toast({
-        title: "РћС€РёР±РєР°",
-        description: error.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°РґР°РЅРёРµ",
+        title: "Ошибка",
+        description: error.message || "Не удалось отправить задание",
         variant: "destructive",
       });
     } finally {
@@ -269,8 +269,8 @@ const Tasks = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>💎 {task.experienceReward || 100} XP</span>
-                        <span>⭐ Уровень {task.requiredLevel || 1}+</span>
+                        <span>{task.experienceReward || 100} XP</span>
+                        <span>Уровень {task.requiredLevel || 1}+</span>
                         <span className="font-medium text-foreground">
                           {getStatusText(task.status || "available")}
                         </span>
@@ -317,8 +317,8 @@ const Tasks = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>💎 {task.experienceReward} XP</span>
-                        <span>⭐ Уровень {task.requiredLevel}+</span>
+                        <span>{task.experienceReward} XP</span>
+                        <span>Уровень {task.requiredLevel}+</span>
                       </div>
                       <Button onClick={() => openSubmissionDialog(task)}>Начать</Button>
                     </div>
@@ -352,7 +352,7 @@ const Tasks = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>💎 {task.experienceReward} XP</span>
+                        <span>{task.experienceReward} XP</span>
                       </div>
                       <Button onClick={() => openSubmissionDialog(task)}>Продолжить</Button>
                     </div>
@@ -387,7 +387,7 @@ const Tasks = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-muted-foreground">💎 {task.experienceReward} XP получено</span>
+                        <span className="text-muted-foreground">{task.experienceReward} XP получено</span>
                       </div>
                       <Button disabled>Завершено</Button>
                     </div>
@@ -397,7 +397,7 @@ const Tasks = () => {
               {tasks.filter(t => t.status === "completed").length === 0 && (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
-                    Пока нет завершённых заданий
+                    Пока нет завершенных заданий
                   </CardContent>
                 </Card>
               )}
@@ -410,7 +410,7 @@ const Tasks = () => {
             <DialogHeader>
               <DialogTitle>{selectedTask?.title}</DialogTitle>
               <DialogDescription>
-                {selectedTask?.description || "Submit your answer for teacher review"}
+                {selectedTask?.description || "Отправьте ответ на проверку учителю"}
               </DialogDescription>
             </DialogHeader>
 
@@ -424,7 +424,7 @@ const Tasks = () => {
 
                 {selectedTask.attachmentUrls && selectedTask.attachmentUrls.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Task files</Label>
+                    <Label>Файлы задания</Label>
                     <div className="flex flex-wrap gap-2">
                       {selectedTask.attachmentUrls.map((url, index) => (
                         <a
@@ -434,7 +434,7 @@ const Tasks = () => {
                           rel="noopener noreferrer"
                           className="text-sm text-primary hover:underline"
                         >
-                          File {index + 1}
+                          Файл {index + 1}
                         </a>
                       ))}
                     </div>
@@ -442,18 +442,18 @@ const Tasks = () => {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="submission-content">Answer</Label>
+                  <Label htmlFor="submission-content">Ответ</Label>
                   <Textarea
                     id="submission-content"
                     value={submissionContent}
                     onChange={(event) => setSubmissionContent(event.target.value)}
                     rows={5}
-                    placeholder="Write your answer..."
+                    placeholder="Напишите ответ..."
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Attach files</Label>
+                  <Label>Прикрепить файлы</Label>
                   <FileUploadButton
                     onFilesSelected={setSubmissionFiles}
                     maxFiles={5}
@@ -462,12 +462,12 @@ const Tasks = () => {
                     disabled={submitting}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Allowed formats: {(selectedTask.allowedSubmissionFileTypes || []).join(", ") || "any"}
+                    Разрешенные форматы: {(selectedTask.allowedSubmissionFileTypes || []).join(", ") || "любые"}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Or add file links</Label>
+                  <Label>Или добавьте ссылки на файлы</Label>
                   <div className="flex gap-2">
                     <Input
                       value={newSubmissionUrl}
@@ -505,10 +505,10 @@ const Tasks = () => {
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={closeSubmissionDialog} disabled={submitting}>
-                    Cancel
+                    Отмена
                   </Button>
                   <Button type="button" onClick={handleSubmitTask} disabled={submitting}>
-                    {submitting ? "Submitting..." : "Submit for review"}
+                    {submitting ? "Отправка..." : "Отправить на проверку"}
                   </Button>
                 </div>
               </div>
